@@ -1,0 +1,137 @@
+
+<script type="text/javascript" src="http://maps.google.com/maps/api/js?key=AIzaSyAtigIrLnYLdIioQQT2bn9jZCiXk52JAuw&
+sensor=false"></script>
+<script type="text/javascript">
+
+// Create GooleMap Class
+var GoogleMap = Class.create({
+  initialize: function() {
+    this.map = new GMap2($("g-map"), {
+      mapTypes: [G_HYBRID_MAP,G_SATELLITE_MAP,G_NORMAL_MAP]
+    });
+
+    this.geo = new GClientGeocoder(null,"ABQIAAAAHHfZCCuiBtuiksybjj2aSBSWt8ngJ8kMyvwGc_L0tOE6EmI5vRSPN4eKZzqnf7eIfXNbDzT_3uoXeQ"); 
+    this.reasons = [];
+    this.reasons[G_GEO_MISSING_ADDRESS]    = "알수 없는 주소: 주소가 없거나 빠져있습니다.";
+    this.reasons[G_GEO_UNKNOWN_ADDRESS]    = "알수 없는 주소:  지리적 위치에 해당하는 지역에 지정된 주소를 찾을 수없습니다.";
+    this.reasons[G_GEO_UNAVAILABLE_ADDRESS]= "확인 할 수 없는 주소: 위치 정보를 제공 주소는 법적 또는 계약상상의 이유로 결과가 반환되지 않았습니니다.";
+    this.reasons[G_GEO_BAD_KEY]            = "잘못된 키: 키가 올바르지 않거나 주어진이있는 도메인이 일치하지 않습니다.";
+    this.reasons[G_GEO_TOO_MANY_QUERIES]   = "쿼리가 너무 많음: 이 사이트에 대한  하루 정보 할당량을 초과했습니다.";
+    this.reasons[G_GEO_SERVER_ERROR]       = "서버 에러: 정보 지정 요청을 성공적으로 처리하지 못했습니다.";
+
+    var hierarchy = new GHierarchicalMapTypeControl(true,false);
+    this.map.addMapType(G_PHYSICAL_MAP);
+    hierarchy.addRelationship(G_SATELLITE_MAP, G_HYBRID_MAP, null, true);
+    this.map.addControl(hierarchy);
+
+    this.map.addControl(new GSmallZoomControl());
+    GOverviewMapControl = new GOverviewMapControl(new GSize(200, 200));
+    this.map.addControl(GOverviewMapControl);
+    GOverviewMapControl.hide();
+
+    this.map.setCenter(new GLatLng(37.525358268020355, 126.9983321428299), 12);
+    this.map.enableContinuousZoom();
+    this.map.enableScrollWheelZoom();
+
+    this.createMarker(
+      new GLatLng(37.51524053983815, 127.04319477081299),
+      '목적지입니다.', {
+        icon: G_END_ICON
+      }
+    );
+    this.createMarker(
+      new GLatLng(37.52492856902793, 126.99221670627594), [
+        {tab: "버스 정거장", content: "버스 정류장입니다."},
+        {tab: "버스", content: "730번"}
+      ]
+    );
+    this.createMarker(
+      new GLatLng(37.525358268020355, 126.9983321428299),
+      '약속장소입니다.', {
+        draggable: true,
+        icon: this.createGIcon("https://firejune.com/attach/0522/080522161309559083/519114.png")
+      }
+    );
+
+    this.polylines = [];    
+    this.createMarker(
+      new GLatLng(37.50972584293751, 127.01946258544922),
+      '', {
+        draggable: true, icon: G_START_ICON
+      }
+    );
+  },
+  showAddress: function() {
+    var search = $("g-search").value;
+    this.geo.getLocations(search, function(result) {
+      if (result.Status.code == G_GEO_SUCCESS) {
+        $("g-message").innerHTML = result.Placemark.length + "개의 지역을 찾았습니다.";
+        for (var i = 0; i < result.Placemark.length; i++) {
+          var p = result.Placemark[i].Point.coordinates;
+          var marker = this.createMarker(
+            new GLatLng(p[1], p[0]),
+            (i + 1) + ": " + result.Placemark[i].address, {
+              draggable: true,
+              icon: this.createGIcon("https://firejune.com/attach/0522/080522161309559083/589997.png")
+            }
+          );
+          $("g-message").innerHTML += "<br />" + (i + 1) + ": " + result.Placemark[i].address + marker.getPoint();
+        }
+        var p = result.Placemark[0].Point.coordinates;
+        this.map.setCenter(new GLatLng(p[1], p[0]), 11);
+      } else {
+        var reason="Code " + result.Status.code;
+        if (this.reasons[result.Status.code]) reason = this.reasons[result.Status.code];
+        $("g-message").innerHTML = ('찾을 수 없습니다! "' + search + '" ' + reason);
+      }
+    }.bind(this));
+  },
+  createGIcon: function(image) {
+    var gIcon = new GIcon();
+    gIcon.image = image;
+    gIcon.shadow = "https://firejune.com/attach/0522/080522161309559083/368854.png";
+    gIcon.iconSize = new GSize(20, 34);
+    gIcon.shadowSize = new GSize(37, 34);
+    gIcon.iconAnchor = new GPoint(9, 34);
+    gIcon.iconAnchor = new GPoint(9, 34);
+    gIcon.infoWindowAnchor = new GPoint(9, 2);
+    gIcon.infoShadowAnchor = new GPoint(18, 25);
+    return gIcon;
+  },
+  createMarker: function(point, html, options) {
+    options = options || {};
+    var marker = new GMarker(point, options), showMarker, items = [];
+    if (typeof html == 'object') {
+      html.each(function(item) {
+        items.push(new GInfoWindowTab(item.tab, item.content));
+      });
+      showMarker = function() {
+        marker.openInfoWindowTabsHtml(items);
+      }
+    } else if (!html) {
+      showMarker = function() {
+        this.map.addOverlay(
+          new GPolyline(
+            [this.polylines[this.polylines.length - 1],
+            marker.getPoint()], '#ff0000', 5, 1
+          )
+        );
+        this.polylines.push(marker.getPoint());
+      }.bind(this)
+    } else {
+      showMarker = function() {
+        marker.openInfoWindowHtml(html);
+      }
+    }
+    if (options.draggable) {
+      GEvent.addListener(marker, "dragstart", this.map.closeInfoWindow);
+      GEvent.addListener(marker, "dragend", showMarker);
+    }
+    if (html) GEvent.addListener(marker, "click", showMarker);
+
+    this.map.addOverlay(marker);
+    return marker;
+  }
+});
+
+if (GBrowserIsCompatible()) GoogleMap = new GoogleMap();

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Insert title here</title>
+</head>
+<body>
+<h2>가나다라</h2>
+<a id="link1" href="#">다음카카오</a><br>
+<a id="link2" href="#">네이버</a><br>
+<a id="link3" href="#">구글</a><br>
+<script type="text/javascript">
+var link1 = document.getElementById("link1");
+link1.onclick = function(event){
+	event.preventDefalut();
+	location.href = "http://www.daum.net"
+}"
+
+var link2 = document.getElementById("link2");
+link1.onclick = function(evnet){
+	event.preventDefalut();
+    location.href = "http://www.naver.com"
+}"
+
+var link3 = document.getElementById("link3");
+link1.onclick = function(){
+	event.preventDefalut();
+    location.href = "http://www.google.com"
+}"
+</script>
+</body>
+</html>
